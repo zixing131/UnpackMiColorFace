@@ -1,6 +1,7 @@
 ﻿using ImageMagick;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -43,7 +44,7 @@ namespace UnpackMiColorFace.Decompiler
 
             offset += (uint)(shiftWords * 0x04);
             offset += (uint)(shiftWordsUnk * 0x04);
-
+            //count = 1;
             for (int index = 0; index < count; index++)
             {
                 string imagesFolder = filenameHelper.GetFaceSlotImagesFolder(watchType, index, subVersion);
@@ -153,10 +154,11 @@ namespace UnpackMiColorFace.Decompiler
             uint dataLen = data.GetDWord(dataOfs + 8);
 
             byte[] bin = data.GetByteArray(dataOfs, dataLen + 0x0C);
-            //File.WriteAllBytes(path + $"img_{idx:D4}.bin", bin);
+            //File.WriteAllBytes(path + $"img_preview.bin", bin);
 
             uint width = bin.GetWord(0x04);
             uint height = bin.GetWord(0x06);
+
 
             int rle = bin[0];
             int type = bin[1];
@@ -225,6 +227,10 @@ namespace UnpackMiColorFace.Decompiler
                         pxls = decData.Rgb565AlphaToRGBA();
                         type = 4;
                         break;
+                    default:
+                        pxls = decData;
+                        type = 4;
+                        break;
                 }
 
                 //binFile = path + "preview_cpr.bin";
@@ -285,6 +291,7 @@ namespace UnpackMiColorFace.Decompiler
             offset = blockOffset;
             for (int i = 0; i < blockCount; i++)
             {
+                try{ 
                 uint idx = data.GetWord(offset);
                 uint id = data.GetDWord(offset);
 
@@ -295,13 +302,18 @@ namespace UnpackMiColorFace.Decompiler
                 uint filenameLen = data[dataOfs + 3];
                 dataLen = 0x14 + filenameLen + fileSize;
 
-                byte[] bin = data.GetByteArray(dataOfs, dataLen);
+                byte[] bin = data.GetByteArray(dataOfs, dataLen); 
+               
+                //    byte[] cpr = bin.GetByteArray(0, dataLen - 8);
+                //    var  type = bin[0x10] & 0x0F;
+                //cpr = BmpHelper.UncompressRLEv20(cpr, (int)dataLen);
 
+                //bin = cpr;
                 //string appFile = path + $"app_{idx:D4}.bin";
                 //File.WriteAllBytes(appFile, bin);
 
-                string filename = Encoding.ASCII.GetString(bin.GetByteArray(0x14, filenameLen));
-
+                string filename = Encoding.UTF8.GetString(bin.GetByteArray(0x14, filenameLen));
+                filename = filename.Trim('\x00').Trim();
                 string appFile = path + filename;
 
                 DirectoryInfo dir;
@@ -319,7 +331,10 @@ namespace UnpackMiColorFace.Decompiler
                     Id = id,
                     Name = filename
                 });
-
+                }catch(Exception ex)
+                {
+                    Console.WriteLine("ProcessAppData "+i+" error");
+                }
                 offset += 0x10;
             }
 
@@ -793,7 +808,10 @@ namespace UnpackMiColorFace.Decompiler
 
                     uint dataOfs = data.GetDWord(offset + 0x08);
                     uint dataLen = data.GetDWord(offset + 0x0C);
-
+                    if (dataLen <= 0x2C)
+                    {
+                        continue;
+                    }
                     byte[] bin = data.GetByteArray(dataOfs, dataLen);
                     //File.WriteAllBytes(path + $"img_{idx:D4}.bin", bin);
 
@@ -838,8 +856,12 @@ namespace UnpackMiColorFace.Decompiler
                     uint dataOfs = data.GetDWord(offset + 0x08);
                     uint dataLen = data.GetDWord(offset + 0x0C);
 
-                    byte[] bin = data.GetByteArray(dataOfs, dataLen);
-                    //File.WriteAllBytes(path + $"img_{idx:D4}.bin", bin);
+                    if (dataLen == 0)
+                    {
+                        continue;
+                    }
+
+                    byte[] bin = data.GetByteArray(dataOfs, dataLen);  
 
                     lst.Add(new FaceElement()
                     {
@@ -1045,6 +1067,10 @@ namespace UnpackMiColorFace.Decompiler
                                 break;
                             case 0x06:
                                 pxls = decData.Rgb565AlphaToRGBA();
+                                type = 4;
+                                break;
+                            default:
+                                pxls = decData;
                                 type = 4;
                                 break;
                         }
@@ -1268,6 +1294,10 @@ namespace UnpackMiColorFace.Decompiler
                                     break;
                                 case 0x06:
                                     pxls = decData.Rgb565AlphaToRGBA();
+                                    type = 4;
+                                    break;
+                                default:
+                                    pxls = decData;
                                     type = 4;
                                     break;
                             }

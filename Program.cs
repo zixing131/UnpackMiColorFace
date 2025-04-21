@@ -32,6 +32,7 @@ namespace UnpackMiColorFace
             }
 
             string filename = args[0];
+            //string filename =  "C:\\Users\\zixing\\Desktop\\face\\123.bin";
 
             if (!File.Exists(filename))
             {

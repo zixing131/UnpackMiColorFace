@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Threading.Tasks;
 using XiaomiWatch.Common;
+using XiaomiWatch.Common.Compress;
 
 namespace UnpackMiColorFace.Helpers
 {
@@ -381,11 +385,23 @@ namespace UnpackMiColorFace.Helpers
         private static byte[] FlipImageData(byte[] src, int width, int height, int type)
         {
             uint rowLen = (uint)(width * type);
-        
             byte[] dst = new byte[src.Length];
 
             if (rowLen * height > src.Length)
-                throw new ApplicationException($"image processing err, image len: {src.Length}, but expected: {rowLen * height}");
+            {
+                var decompressor = ImageCompressFactory.GetDecompressor(WatchType.MiBand8Pro);
+
+                byte[] cpr = src.GetByteArray(0xCu + 8, src.Length - 0x0C - 8);
+                var decData = decompressor.Decompress(src, (int)width, (int)height, src.GetDWord(0x10));
+                if (rowLen * height > decData.Length)
+                {
+                    throw new ApplicationException($"image processing err, image len: {src.Length}, but expected: {rowLen * height}");
+                }
+                else
+                {
+                    return FlipImageData(decData, width, height, type);
+                } 
+            }
 
             uint srcOffset = (uint)src.Length - rowLen;
 
